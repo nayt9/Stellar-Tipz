@@ -17,7 +17,9 @@ mod admin;
 mod credit;
 mod errors;
 mod events;
+mod fees;
 mod leaderboard;
+mod profile;
 mod storage;
 mod tips;
 mod types;
@@ -65,8 +67,15 @@ impl TipzContract {
         _image_url: String,
         _x_handle: String,
     ) -> Result<Profile, ContractError> {
-        // TODO: Implement in issue #1 - Profile Registration
-        Err(ContractError::NotInitialized)
+        profile::register_profile(
+            &env,
+            caller,
+            username,
+            display_name,
+            bio,
+            image_url,
+            x_handle,
+        )
     }
 
     /// Update an existing profile (owner only).
@@ -113,11 +122,11 @@ impl TipzContract {
 
     /// Send an XLM tip to a registered creator.
     pub fn send_tip(
-        env: Env,
-        tipper: Address,
-        creator: Address,
-        amount: i128,
-        message: String,
+        _env: Env,
+        _tipper: Address,
+        _creator: Address,
+        _amount: i128,
+        _message: String,
     ) -> Result<(), ContractError> {
         tips::send_tip(&env, &tipper, &creator, amount, &message)
     }

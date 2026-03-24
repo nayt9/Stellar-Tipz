@@ -34,4 +34,8 @@ pub enum ContractError {
     MessageTooLong = 13,
     /// Username not found in reverse lookup
     NotFound = 14,
+    /// Arithmetic overflow during fee calculation
+    OverflowError = 15,
+    /// Image URL exceeds 256 characters
+    InvalidImageUrl = 16,
 }
