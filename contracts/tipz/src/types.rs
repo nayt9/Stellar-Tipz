@@ -38,19 +38,21 @@ pub struct Profile {
     pub updated_at: u64,
 }
 
-/// Individual tip record.
+/// Individual tip record stored in temporary storage with a TTL of ~7 days.
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct Tip {
-    /// Tipper's address
-    pub from: Address,
-    /// Creator's address
-    pub to: Address,
+    /// Unique tip ID (monotonically increasing global counter)
+    pub id: u32,
+    /// Address that sent the tip
+    pub tipper: Address,
+    /// Address of the creator who received the tip
+    pub creator: Address,
     /// Tip amount in stroops
     pub amount: i128,
     /// Optional message (0-280 chars)
     pub message: String,
-    /// Ledger timestamp
+    /// Ledger timestamp at the time the tip was sent
     pub timestamp: u64,
 }
 
