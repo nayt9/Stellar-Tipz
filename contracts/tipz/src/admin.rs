@@ -4,12 +4,12 @@
 //! - Fee management
 //! - Admin role transfer
 
-use soroban_sdk::{Address, Env, Vec};
+use soroban_sdk::{ Address, Env, Vec };
 
 use crate::credit;
 use crate::errors::ContractError;
 use crate::events;
-use crate::storage::{self, DataKey};
+use crate::storage::{ self, DataKey };
 
 pub fn require_admin(env: &Env, caller: &Address) -> Result<(), ContractError> {
     if !storage::is_initialized(env) {
@@ -29,7 +29,7 @@ pub fn initialize(
     admin: &Address,
     fee_collector: &Address,
     fee_bps: u32,
-    native_token: &Address,
+    native_token: &Address
 ) -> Result<(), ContractError> {
     if storage::is_initialized(env) {
         return Err(ContractError::AlreadyInitialized);
@@ -44,16 +44,10 @@ pub fn initialize(
     storage::set_native_token(env, native_token);
 
     // Initialise counters to zero so reads never return None.
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalCreators, &0_u32);
+    env.storage().instance().set(&DataKey::TotalCreators, &0_u32);
     env.storage().instance().set(&DataKey::TipCount, &0_u32);
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalTipsVolume, &0_i128);
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalFeesCollected, &0_i128);
+    env.storage().instance().set(&DataKey::TotalTipsVolume, &0_i128);
+    env.storage().instance().set(&DataKey::TotalFeesCollected, &0_i128);
 
     Ok(())
 }
@@ -67,7 +61,7 @@ fn apply_x_metrics_to_profile(
     env: &Env,
     creator: &Address,
     x_followers: u32,
-    x_engagement_avg: u32,
+    x_engagement_avg: u32
 ) {
     let mut profile = storage::get_profile(env, creator);
     let old_score = profile.credit_score;
@@ -92,7 +86,7 @@ pub fn update_x_metrics(
     caller: &Address,
     creator: &Address,
     x_followers: u32,
-    x_engagement_avg: u32,
+    x_engagement_avg: u32
 ) -> Result<(), ContractError> {
     require_admin(env, caller)?;
     if !storage::has_profile(env, creator) {
@@ -110,7 +104,7 @@ pub fn update_x_metrics(
 pub fn batch_update_x_metrics(
     env: &Env,
     caller: &Address,
-    updates: Vec<(Address, u32, u32)>,
+    updates: Vec<(Address, u32, u32)>
 ) -> Result<u32, ContractError> {
     require_admin(env, caller)?;
     let len = updates.len();
@@ -163,7 +157,7 @@ pub fn set_fee(env: &Env, caller: &Address, new_fee_bps: u32) -> Result<(), Cont
 pub fn set_fee_collector(
     env: &Env,
     caller: &Address,
-    new_collector: &Address,
+    new_collector: &Address
 ) -> Result<(), ContractError> {
     // 1. Authenticate + authorise
     require_admin(env, caller)?;
