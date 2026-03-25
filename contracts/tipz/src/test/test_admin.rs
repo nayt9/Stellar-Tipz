@@ -33,6 +33,35 @@ fn native_token_address(env: &Env) -> Address {
         .address()
 }
 
+/// Register a creator profile with a default username derived from their position.
+fn insert_profile(env: &Env, client: &TipzContractClient, creator: &Address) {
+    client.register_profile(
+        creator,
+        &String::from_str(env, "creator"),
+        &String::from_str(env, "Creator"),
+        &String::from_str(env, ""),
+        &String::from_str(env, ""),
+        &String::from_str(env, ""),
+    );
+}
+
+/// Register a creator profile with a specific username.
+fn insert_profile_with_username(
+    env: &Env,
+    client: &TipzContractClient,
+    creator: &Address,
+    username: &str,
+) {
+    client.register_profile(
+        creator,
+        &String::from_str(env, username),
+        &String::from_str(env, username),
+        &String::from_str(env, ""),
+        &String::from_str(env, ""),
+        &String::from_str(env, ""),
+    );
+}
+
 #[test]
 fn test_initialize_sets_state_correctly() {
     let (env, client) = setup_env();
@@ -41,11 +70,7 @@ fn test_initialize_sets_state_correctly() {
     let token_address = native_token_address(&env);
     let fee_bps: u32 = 200; // 2%
 
-<<<<<<< HEAD
     client.initialize(&admin, &fee_collector, &fee_bps, &token_address);
-=======
-    client.initialize(&admin, &fee_collector, &fee_bps, &dummy_token(&env));
->>>>>>> b50c5af (feat(#22): add profile registration tests and fix pre-existing compile errors)
 
     // Verify stored values via raw storage access
     let stored_admin: Address = env.as_contract(&client.address, || {

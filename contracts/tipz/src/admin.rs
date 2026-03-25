@@ -32,6 +32,8 @@ pub fn initialize(
     storage::set_fee_collector(env, fee_collector);
     storage::set_fee_bps(env, fee_bps);
     storage::set_native_token(env, native_token);
+
+    // Initialise counters to zero so reads never return None.
     env.storage()
         .instance()
         .set(&DataKey::TotalCreators, &0_u32);
@@ -42,12 +44,6 @@ pub fn initialize(
     env.storage()
         .instance()
         .set(&DataKey::TotalFeesCollected, &0_i128);
-
-    // Initialise counters to zero so reads never return None.
-    env.storage().instance().set(&crate::storage::DataKey::TotalCreators, &0u32);
-    env.storage().instance().set(&crate::storage::DataKey::TipCount, &0u32);
-    env.storage().instance().set(&crate::storage::DataKey::TotalTipsVolume, &0i128);
-    env.storage().instance().set(&crate::storage::DataKey::TotalFeesCollected, &0i128);
 
     Ok(())
 }

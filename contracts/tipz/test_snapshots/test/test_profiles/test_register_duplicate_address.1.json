@@ -264,6 +264,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "x_engagement_avg"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "x_followers"
                       },
                       "val": {
@@ -276,22 +284,6 @@
                       },
                       "val": {
                         "string": "handle"
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "x_posts"
-                      },
-                      "val": {
-                        "u32": 0
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "x_replies"
-                      },
-                      "val": {
-                        "u32": 0
                       }
                     }
                   ]
@@ -1032,6 +1024,14 @@
                 },
                 {
                   "key": {
+                    "symbol": "x_engagement_avg"
+                  },
+                  "val": {
+                    "u32": 0
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "x_followers"
                   },
                   "val": {
@@ -1044,22 +1044,6 @@
                   },
                   "val": {
                     "string": "handle"
-                  }
-                },
-                {
-                  "key": {
-                    "symbol": "x_posts"
-                  },
-                  "val": {
-                    "u32": 0
-                  }
-                },
-                {
-                  "key": {
-                    "symbol": "x_replies"
-                  },
-                  "val": {
-                    "u32": 0
                   }
                 }
               ]

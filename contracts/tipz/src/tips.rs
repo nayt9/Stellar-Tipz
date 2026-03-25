@@ -4,7 +4,7 @@
 //! bounded lifetime, while aggregate counters remain in persistent contract
 //! state.
 
-use soroban_sdk::{token, Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, String, Vec};
 
 use crate::errors::ContractError;
 use crate::events::emit_tip_sent;

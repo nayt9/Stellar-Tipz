@@ -105,6 +105,7 @@ fn test_send_tip_success() {
     // Verify tip record was created in temporary storage
     env.as_contract(&contract_id, || {
         let tip: Tip = env.storage().temporary().get(&DataKey::Tip(0)).unwrap();
+        assert_eq!(tip.id, 0);
         assert_eq!(tip.tipper, tipper);
         assert_eq!(tip.creator, creator);
         assert_eq!(tip.amount, amount);

@@ -73,3 +73,25 @@ pub fn emit_x_metrics_batch_skipped(env: &Env, creator: &Address) {
         creator.clone(),
     );
 }
+
+/// Emit an `AdminChanged` event when the admin role is transferred.
+///
+/// Topic: ("admin", "changed")
+#[allow(dead_code)]
+pub fn emit_admin_changed(env: &Env, old_admin: &Address, new_admin: &Address) {
+    env.events().publish(
+        (symbol_short!("admin"), symbol_short!("changed")),
+        (old_admin.clone(), new_admin.clone()),
+    );
+}
+
+/// Emit a `FeeUpdated` event when the withdrawal fee is changed.
+///
+/// Topic: ("fee", "updated")
+#[allow(dead_code)]
+pub fn emit_fee_updated(env: &Env, old_bps: u32, new_bps: u32) {
+    env.events().publish(
+        (symbol_short!("fee"), symbol_short!("updated")),
+        (old_bps, new_bps),
+    );
+}
