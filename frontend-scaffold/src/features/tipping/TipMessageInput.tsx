@@ -3,19 +3,44 @@ import Textarea from "../../components/ui/Textarea";
 
 interface TipMessageInputProps {
   message: string;
-  onChange: (msg: string) => void;
+  onChange: (message: string) => void;
+  maxLength?: number;
+  disabled?: boolean;
 }
 
-const TipMessageInput: React.FC<TipMessageInputProps> = ({ message, onChange }) => {
+const TipMessageInput: React.FC<TipMessageInputProps> = ({
+  message,
+  onChange,
+  maxLength = 160,
+  disabled = false,
+}) => {
+  const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = event.target.value;
+    if (newValue.length <= maxLength) {
+      onChange(newValue);
+    }
+  };
+
   return (
-    <Textarea
-      label="Message"
-      placeholder="Leave a message... (optional)"
-      maxLength={280}
-      rows={3}
-      value={message}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">
+          Message (Optional)
+        </label>
+        <span className={`text-[10px] font-bold ${message.length >= maxLength ? 'text-red-600' : 'text-gray-400'}`}>
+          {message.length}/{maxLength}
+        </span>
+      </div>
+      <Textarea
+        placeholder="Say why you are supporting this creator..."
+        value={message}
+        onChange={handleChange}
+        maxLength={maxLength}
+        disabled={disabled}
+        rows={3}
+        className="resize-none"
+      />
+    </div>
   );
 };
 
