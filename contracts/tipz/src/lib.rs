@@ -338,7 +338,11 @@ impl TipzContract {
         storage::is_paused(&env)
     }
 
-    pub fn set_min_tip_amount(env: Env, caller: Address, amount: i128) -> Result<(), ContractError> {
+    pub fn set_min_tip_amount(
+        env: Env,
+        caller: Address,
+        amount: i128,
+    ) -> Result<(), ContractError> {
         admin::set_min_tip_amount(&env, &caller, amount)
     }
 

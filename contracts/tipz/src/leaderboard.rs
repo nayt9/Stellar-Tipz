@@ -211,6 +211,7 @@ pub fn get_leaderboard_rank(env: &Env, address: &Address) -> Option<u32> {
 ///
 /// If the address is not present this is a no-op.  Entries above the removed
 /// slot shift down by one position, preserving relative order.
+#[allow(dead_code)]
 pub fn remove_from_leaderboard(env: &Env, address: &Address) {
     let entries = load_entries(env);
     let mut new_entries: Vec<LeaderboardEntry> = Vec::new(env);
@@ -670,7 +671,10 @@ mod tests {
                 addr3,
                 "addr3 shifts up to rank 2"
             );
-            assert!(!is_on_leaderboard(&env, &addr2), "removed entry must be gone");
+            assert!(
+                !is_on_leaderboard(&env, &addr2),
+                "removed entry must be gone"
+            );
         });
     }
 }

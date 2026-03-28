@@ -130,7 +130,10 @@ pub fn set_native_token(env: &Env, addr: &Address) {
 
 /// Returns `true` when the contract is paused.
 pub fn is_paused(env: &Env) -> bool {
-    env.storage().instance().get(&DataKey::Paused).unwrap_or(false)
+    env.storage()
+        .instance()
+        .get(&DataKey::Paused)
+        .unwrap_or(false)
 }
 
 /// Sets the paused flag.
@@ -152,7 +155,9 @@ pub fn get_min_tip_amount(env: &Env) -> i128 {
 
 /// Sets the minimum allowed tip amount in stroops.
 pub fn set_min_tip_amount(env: &Env, amount: i128) {
-    env.storage().instance().set(&DataKey::MinTipAmount, &amount);
+    env.storage()
+        .instance()
+        .set(&DataKey::MinTipAmount, &amount);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
