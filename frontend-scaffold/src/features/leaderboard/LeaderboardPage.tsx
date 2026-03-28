@@ -9,10 +9,13 @@ import Avatar from "../../components/ui/Avatar";
 import Card from "../../components/ui/Card";
 import Pagination from "../../components/ui/Pagination";
 import { mockLeaderboard } from "../mockData";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const PAGE_SIZE = 5;
 
 const LeaderboardPage: React.FC = () => {
+  usePageTitle('Leaderboard');
+
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(mockLeaderboard.length / PAGE_SIZE);
 
@@ -77,10 +80,10 @@ const LeaderboardPage: React.FC = () => {
             <table className="min-w-full border-collapse">
               <thead>
                 <tr className="border-b-2 border-black text-left">
-                  <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Rank</th>
-                  <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Creator</th>
-                  <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Volume</th>
-                  <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Credit</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Rank</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Creator</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Volume</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-black uppercase tracking-[0.2em]">Credit</th>
                 </tr>
               </thead>
               <tbody>
