@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -8,6 +8,63 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(
+          'a[href], button, textarea, input[type="text"], input[type="radio"], input[type="checkbox"], select, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            lastElement?.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement?.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+
+      const timer = setTimeout(() => {
+        if (modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll(
+            'a[href], button, textarea, input[type="text"], input[type="radio"], input[type="checkbox"], select, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements.length) {
+            (focusableElements[0] as HTMLElement).focus();
+          } else {
+            modalRef.current.focus();
+          }
+        }
+      }, 10);
+
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('keydown', handleKeyDown);
+        document.body.style.overflow = 'unset';
+        if (previousFocusRef.current) {
+          previousFocusRef.current.focus();
+        }
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -29,10 +86,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       >
         {title && (
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black uppercase">{title}</h2>
+            <h2 id="modal-title" className="text-2xl font-black uppercase">{title}</h2>
             <button
               onClick={onClose}
-              className="text-2xl font-black hover:opacity-60 transition-opacity"
+              className="text-2xl font-black hover:opacity-60 transition-opacity focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               aria-label="Close modal"
             >
               ✕

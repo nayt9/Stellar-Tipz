@@ -19,6 +19,7 @@ import CreatorNotFound from "./CreatorNotFound";
 import RecentTips from "./RecentTips";
 import TipConfirm from "./TipConfirm";
 import { useTipFlow } from "./useTipFlow";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const TipPage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -39,7 +40,9 @@ const TipPage: React.FC = () => {
     ...mockProfile,
     username: username || mockProfile.username,
   };
-  const creatorNotFound = !username || username !== mockProfile.username;
+  
+  usePageTitle(`Tip @${creator.username}`);
+
   const { step, goToConfirm, confirmAndSign, reset, error, txHash } = useTipFlow(creator.owner);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {

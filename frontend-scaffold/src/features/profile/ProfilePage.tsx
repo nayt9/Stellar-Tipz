@@ -13,11 +13,14 @@ import { useProfile } from "../../hooks";
 import { mockProfile } from "../mockData";
 import ActivityFeed from "./ActivityFeed";
 import XHandleLink from "./XHandleLink";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const ProfilePage: React.FC = () => {
   const { profile } = useProfile();
   const activeProfile = profile ?? mockProfile;
   const usingMockProfile = !profile;
+
+  usePageTitle(`${activeProfile.displayName} (@${activeProfile.username})`);
 
   return (
     <PageContainer maxWidth="xl" className="space-y-8 py-10">
