@@ -15,9 +15,9 @@ const Skeleton: React.FC<SkeletonProps> = ({
 }) => {
   const baseClasses = 'animate-pulse border-2 border-black';
   const bgClasses = 'bg-gray-200'; // Pulsing will be mostly handled by Tailwind's animate-pulse, we can add a custom pulse in CSS if we specifically need grey-100 to grey-200, but standard is fine. Actually, let's inject a style or use standard animate-pulse with a gray background.
-  
+
   // Custom keyframes could be added but Tailwind's default animate-pulse changes opacity which looks close enough if combined with a base background. For brutalism, using a straight gray background is preferred.
-  
+
   if (variant === 'text') {
     return (
       <div className="flex flex-col gap-2">
@@ -37,9 +37,9 @@ const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <div
-      className={`${baseClasses} ${bgClasses} ${
-        variant === 'circle' ? 'rounded-full' : 'rounded-none'
-      }`}
+      data-testid={`skeleton-${variant}`}
+      className={`${baseClasses} ${bgClasses} ${variant === 'circle' ? 'rounded-full' : 'rounded-none'
+        }`}
       style={{
         width: width || (variant === 'circle' ? '3rem' : '100%'),
         height: height || (variant === 'circle' ? '3rem' : '10rem'),
