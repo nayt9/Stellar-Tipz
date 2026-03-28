@@ -101,15 +101,14 @@ fn test_event_tip_sent_contains_all_indexing_fields() {
     assert_topic!(topics.get(1).unwrap(), symbol_short!("sent"));
 
     // Verify data contains all 6 fields by decoding the tuple
-    let (
-        ev_tip_id,
-        ev_tipper,
-        ev_creator,
-        ev_amount,
-        ev_message,
-        ev_timestamp,
-    ): (u32, Address, Address, i128, String, u64) =
-        soroban_sdk::FromVal::from_val(&env, &data);
+    let (ev_tip_id, ev_tipper, ev_creator, ev_amount, ev_message, ev_timestamp): (
+        u32,
+        Address,
+        Address,
+        i128,
+        String,
+        u64,
+    ) = soroban_sdk::FromVal::from_val(&env, &data);
 
     assert_eq!(ev_tip_id, tip_id);
     assert_eq!(ev_tipper, tipper);

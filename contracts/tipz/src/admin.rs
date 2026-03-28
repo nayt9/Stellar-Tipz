@@ -143,7 +143,8 @@ pub fn batch_update_x_metrics_preview(
     let mut i: u32 = 0;
     while i < len {
         let (creator, x_followers, x_engagement_avg) = updates.get(i).unwrap();
-        if !storage::has_profile(env, &creator) || !validate_x_metrics(x_followers, x_engagement_avg)
+        if !storage::has_profile(env, &creator)
+            || !validate_x_metrics(x_followers, x_engagement_avg)
         {
             skipped.push_back(creator);
         }
@@ -176,10 +177,9 @@ pub fn batch_update_x_metrics(
     let mut i: u32 = 0;
     while i < len {
         let (creator, x_followers, x_engagement_avg) = updates.get(i).unwrap();
-        if !validate_x_metrics(x_followers, x_engagement_avg) {
-            events::emit_x_metrics_batch_skipped(env, &creator);
-            skipped_addresses.push_back(creator);
-        } else if !storage::has_profile(env, &creator) {
+        if !validate_x_metrics(x_followers, x_engagement_avg)
+            || !storage::has_profile(env, &creator)
+        {
             events::emit_x_metrics_batch_skipped(env, &creator);
             skipped_addresses.push_back(creator);
         } else {
@@ -189,7 +189,12 @@ pub fn batch_update_x_metrics(
         i += 1;
     }
     let skipped_count = skipped_addresses.len();
-    events::emit_x_metrics_batch_completed(env, processed, skipped_count, skipped_addresses.clone());
+    events::emit_x_metrics_batch_completed(
+        env,
+        processed,
+        skipped_count,
+        skipped_addresses.clone(),
+    );
     Ok(skipped_addresses)
 }
 

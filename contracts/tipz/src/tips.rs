@@ -64,7 +64,7 @@ pub fn get_recent_tips(env: &Env, creator: &Address, limit: u32, offset: u32) ->
     let mut found = 0_u32;
 
     // Start iterating from (count - offset) downward
-    let start = if offset >= count { 0 } else { count - offset };
+    let start = count.saturating_sub(offset);
     let mut index = start;
 
     while index > 0 && found < limit {

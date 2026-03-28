@@ -50,7 +50,15 @@ fn setup_env() -> (
     let token_admin_client = token::StellarAssetClient::new(&env, &token_address);
     token_admin_client.mint(&tipper, &500_000_000);
 
-    (env, client, contract_id, admin, tipper, creator, token_address)
+    (
+        env,
+        client,
+        contract_id,
+        admin,
+        tipper,
+        creator,
+        token_address,
+    )
 }
 
 #[test]
