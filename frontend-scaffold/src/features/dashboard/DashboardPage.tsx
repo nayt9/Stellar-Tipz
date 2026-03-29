@@ -1,12 +1,6 @@
-import React from "react";
-import {
-  ArrowUpRight,
-  Coins,
-  LayoutDashboard,
-  Wallet,
-  QrCode,
-} from "lucide-react";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { ArrowUpRight, Coins, LayoutDashboard, Wallet, QrCode, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import PageContainer from "@/components/layout/PageContainer";
 import AmountDisplay from "@/components/shared/AmountDisplay";
@@ -32,6 +26,8 @@ import OverviewTab from "./OverviewTab";
 import QRCode from "./QRCode";
 import SettingsTab from "./SettingsTab";
 import TipsTab from "./TipsTab";
+import { useWalletStore } from "../../store/walletStore";
+import { useDashboard, usePageTitle } from "../../hooks";
 
 const TIPS_PREVIEW = 3;
 
