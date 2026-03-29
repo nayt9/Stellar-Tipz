@@ -115,5 +115,8 @@ export const useWallet = () => {
     ],
   );
 
-  return { publicKey, connected, connecting, error, network, ...actions };
+  return useMemo(
+    () => ({ publicKey, connected, connecting, error, network, ...actions }),
+    [publicKey, connected, connecting, error, network, actions]
+  );
 };

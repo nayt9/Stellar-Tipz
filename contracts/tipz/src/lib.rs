@@ -29,10 +29,16 @@ mod validation;
 #[cfg(test)]
 mod test;
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
 
 use crate::errors::ContractError;
-use crate::types::{ContractStats, CreditBreakdown, CreditTier, LeaderboardEntry, Profile, Tip};
+use crate::types::{
+    ContractConfig, ContractStats, CreditBreakdown, CreditTier, LeaderboardEntry, Profile, Tip,
+};
+
+/// The current contract interface version, stored on-chain during initialization.
+/// Must be incremented manually in source when the contract interface changes.
+const CONTRACT_VERSION: u32 = 1;
 
 #[contract]
 pub struct TipzContract;
@@ -321,9 +327,60 @@ impl TipzContract {
         })
     }
 
+    /// Get full contract configuration (superset of get_stats).
+    /// Returns all admin-readable configuration in a single call,
+    /// reducing frontend RPC calls.
+    pub fn get_config(env: Env) -> Result<ContractConfig, ContractError> {
+        if !storage::is_initialized(&env) {
+            return Err(ContractError::NotInitialized);
+        }
+        Ok(ContractConfig {
+            admin: storage::get_admin(&env),
+            fee_collector: storage::get_fee_collector(&env),
+            fee_bps: storage::get_fee_bps(&env),
+            native_token: storage::get_native_token(&env),
+            total_creators: storage::get_total_creators(&env),
+            total_tips_count: storage::get_tip_count(&env),
+            total_tips_volume: storage::get_total_tips_volume(&env),
+            total_fees_collected: storage::get_total_fees(&env),
+            is_initialized: storage::is_initialized(&env),
+            version: storage::get_version(&env),
+        })
+    }
+
     /// Extend the contract instance TTL manually (admin only).
     pub fn bump_ttl(env: Env, caller: Address) -> Result<(), ContractError> {
         admin::bump_ttl(&env, &caller)
+    }
+
+    // ──────────────────────────────────────────────
+    // Versioning
+    // ──────────────────────────────────────────────
+
+    /// Returns the on-chain stored contract version.
+    ///
+    /// Intended for frontend compatibility checks and upgrade coordination.
+    /// Returns 0 if the contract has not been initialized.
+    pub fn get_version(env: Env) -> u32 {
+        storage::get_version(&env)
+    }
+
+    /// Replace the contract WASM bytecode and bump the stored version.
+    ///
+    /// # Security
+    /// Only the stored admin address can call this function.
+    ///
+    /// # Arguments
+    /// * `new_wasm_hash` — hash of the already-uploaded WASM blob to switch to.
+    ///
+    /// After this call the contract executes new WASM code and the stored
+    /// version is incremented by one.
+    pub fn upgrade(
+        env: Env,
+        admin: Address,
+        new_wasm_hash: BytesN<32>,
+    ) -> Result<(), ContractError> {
+        admin::upgrade(&env, &admin, &new_wasm_hash)
     }
 
     pub fn pause(env: Env, caller: Address) -> Result<(), ContractError> {

@@ -4,3 +4,4 @@ export * from './useProfile';
 export * from './useTipz';
 export * from './useUsernameCheck';
 export * from './useDashboard';
+export * from './usePageTitle';

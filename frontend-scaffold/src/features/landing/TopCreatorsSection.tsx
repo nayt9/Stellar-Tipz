@@ -1,104 +1,119 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy } from 'lucide-react';
+import { ArrowRight, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useContract } from '@/hooks';
 import { LeaderboardEntry } from '@/types/contract';
+import ProfileCard from '@/components/shared/ProfileCard';
+import Skeleton from '@/components/ui/Skeleton';
+import EmptyState from '@/components/ui/EmptyState';
 
-const MEDAL = ['🥇', '🥈', '🥉'];
-
-const TopCreatorsSection: React.FC = () => {
+export default function TopCreatorsSection() {
   const [creators, setCreators] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { getLeaderboard } = useContract();
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
     getLeaderboard(5)
-      .then(setCreators)
-      .catch(() => {
-        // Contract may not be deployed yet — render empty gracefully
+      .then((data) => {
+        if (mounted) {
+          setCreators(data);
+          setLoading(false);
+        }
       })
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (mounted) {
+          console.error('Failed to fetch leaderboard:', err);
+          setError('Could not load top creators');
+          setLoading(false);
+        }
+      });
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!loading && creators.length === 0) return null;
+  const handleViewFullLeaderboard = () => {
+    navigate('/leaderboard');
+  };
 
   return (
-    <section className="py-20 px-4">
-      <div className="max-w-4xl mx-auto">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-5xl md:text-6xl font-black text-center mb-4"
-        >
-          TOP CREATORS
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="text-center text-gray-600 mb-12"
-        >
-          The most-tipped creators on Tipz this week
-        </motion.p>
+    <section className="py-24 px-6 bg-off-white overflow-hidden">
+      <div className="max-w-7xl mx-auto space-y-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 border-2 border-black text-xs font-black uppercase tracking-widest">
+              <Trophy size={14} />
+              Leaderboard
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black uppercase leading-none">
+              Top Creators
+            </h2>
+            <p className="text-lg font-bold text-gray-600 max-w-xl">
+              Meet the most supported creators in the Tipz ecosystem.
+            </p>
+          </div>
+
+          <button
+            onClick={handleViewFullLeaderboard}
+            className="group inline-flex items-center gap-2 text-sm font-black uppercase tracking-wider hover:underline"
+          >
+            View Full Leaderboard
+            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
 
         {loading ? (
-          <div className="space-y-4">
+          <div className="flex gap-6 overflow-hidden pb-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="card-brutalist animate-pulse h-16" />
+              <div key={i} className="w-64 flex-shrink-0">
+                <Skeleton variant="rect" height="200px" />
+              </div>
             ))}
           </div>
+        ) : error ? (
+          <div className="border-3 border-black p-8 bg-red-50 text-center">
+            <p className="font-black uppercase text-red-600">Error: {error}</p>
+          </div>
+        ) : creators.length === 0 ? (
+          <div className="border-3 border-black bg-white">
+            <EmptyState
+              title="No creators yet"
+              description="Be the first to tip someone and start the leaderboard!"
+              action={{
+                label: "Find Creators",
+                onClick: () => navigate('/leaderboard')
+              }}
+            />
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div
+            className="flex gap-6 overflow-x-auto pb-8 -mx-6 px-6 no-scrollbar"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {creators.map((creator, index) => (
-              <motion.button
+              <motion.div
                 key={creator.address}
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.08 }}
-                className="card-brutalist w-full flex items-center gap-4 text-left hover:-translate-y-0.5 transition-transform duration-150"
-                onClick={() => navigate(`/@${creator.username}`)}
+                transition={{ delay: index * 0.1, duration: 0.4 }}
               >
-                <span className="text-2xl w-8 flex-shrink-0">
-                  {index < 3 ? MEDAL[index] : <Trophy size={20} />}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-black text-lg truncate">@{creator.username}</div>
-                  <div className="text-sm text-gray-600 truncate">
-                    Score: {creator.creditScore}
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="font-bold">{creator.totalTipsReceived} XLM</div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">received</div>
-                </div>
-              </motion.button>
+                <ProfileCard
+                  variant="compact"
+                  handle={creator.username}
+                  publicKey={creator.address}
+                  totalTips={creator.totalTipsReceived}
+                  creditScore={creator.creditScore}
+                  onTip={() => navigate(`/@${creator.username}`)}
+                />
+              </motion.div>
             ))}
           </div>
         )}
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="text-center mt-10"
-        >
-          <button
-            className="btn-brutalist-outline"
-            onClick={() => navigate('/leaderboard')}
-          >
-            View Full Leaderboard →
-          </button>
-        </motion.div>
       </div>
     </section>
   );
-};
-
-export default TopCreatorsSection;
+}
