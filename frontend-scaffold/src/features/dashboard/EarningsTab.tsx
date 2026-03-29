@@ -5,7 +5,9 @@ import AmountDisplay from "../../components/shared/AmountDisplay";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
-import { useDashboard } from "../../hooks/useDashboard";
+import { formatTimestamp } from "../../helpers/format";
+import type { ContractStats, Profile } from "../../types";
+import { mockTips } from "../mockData";
 import BalanceCard from "./BalanceCard";
 import EarningsChart from "./EarningsChart";
 import WithdrawModal from "./WithdrawModal";
@@ -19,12 +21,13 @@ interface WithdrawalHistoryItem {
   net: string;
 }
 
-const DEFAULT_FEE_BPS = 200;
-
-const EarningsTab: React.FC = () => {
-  const { profile, tips, stats, loading } = useDashboard();
+const EarningsTab: React.FC<EarningsTabProps> = ({
+  profile,
+  stats,
+  loading = false,
+}) => {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const feeBps = stats?.feeBps ?? DEFAULT_FEE_BPS;
+  const feeBps = stats?.feeBps ?? 200;
 
   // Manual calculation for withdrawal history based on tips (placeholder logic since contract doesn't return withdrawals yet)
   const withdrawals = useMemo<WithdrawalHistoryItem[]>(() => {
@@ -35,7 +38,7 @@ const EarningsTab: React.FC = () => {
 
       return {
         id: `${tip.from}-${tip.timestamp}`,
-        createdAt: tip.timestamp - (index + 1) * 12 * 60 * 60 * 1000,
+        createdAt: tip.timestamp - (index + 1) * 12 * 60 * 60,
         gross: gross.toString(),
         fee: fee.toString(),
         net: net.toString(),
@@ -110,7 +113,7 @@ const EarningsTab: React.FC = () => {
                     Requested
                   </p>
                   <p className="mt-2 text-lg font-black">
-                    {new Date(entry.createdAt).toLocaleDateString("en-US", {
+                    {formatTimestamp(entry.createdAt).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",

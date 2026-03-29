@@ -38,9 +38,9 @@ function buildWeeklyChart(tips: Tip[]) {
 }
 
 // Weekly tips count (tips received in the past 7 days)
-function countThisWeek(tips: Tip[]) {
-  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  return tips.filter((t) => t.timestamp * 1000 >= cutoff).length;
+function countThisWeek(tips: typeof mockTips) {
+  const cutoff = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+  return tips.filter((t) => t.timestamp >= cutoff).length;
 }
 
 // Stroop → display XLM string
@@ -182,8 +182,8 @@ const OverviewTab: React.FC = () => {
 
       <WithdrawModal
         isOpen={withdrawOpen}
-        balance={profile.balance}
-        feeBps={stats?.feeBps || 200}
+        balance={mockProfile.balance}
+        feeBps={200}
         onClose={() => setWithdrawOpen(false)}
       />
     </div>
