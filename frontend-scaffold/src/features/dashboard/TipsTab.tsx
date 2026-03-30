@@ -48,7 +48,7 @@ const TipsTab: React.FC = () => {
       }
       if (senderSearch.trim()) {
         const q = senderSearch.trim().toLowerCase();
-        if (!tip.from.toLowerCase().includes(q)) return false;
+        if (!tip.tipper.toLowerCase().includes(q)) return false;
       }
       return true;
     });
@@ -62,14 +62,14 @@ const TipsTab: React.FC = () => {
 
   const tableData = paginated.map((tip) => ({
     date: formatTimestamp(tip.timestamp),
-    from: truncateAddress(tip.from),
+    tipper: truncateAddress(tip.tipper),
     amount: `${stroopToXlm(tip.amount, 7)} XLM`,
     message: tip.message || "—",
   }));
 
   const columns = [
     { key: "date", label: "Date" },
-    { key: "from", label: "Sender" },
+    { key: "tipper", label: "Sender" },
     { key: "amount", label: "Amount", align: "right" as const },
     { key: "message", label: "Message" },
   ];

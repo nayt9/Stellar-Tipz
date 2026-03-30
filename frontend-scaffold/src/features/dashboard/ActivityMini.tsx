@@ -67,7 +67,7 @@ const ActivityMini: React.FC<ActivityMiniProps> = ({ tips, onViewAll }) => {
         <ul className="divide-y divide-dashed divide-gray-300">
           {recentTips.map((tip, index) => (
             <li
-              key={`${tip.from}-${tip.timestamp}-${index}`}
+              key={`${tip.id}-${index}`}
               className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
             >
               <span className="w-16 flex-shrink-0 text-xs font-bold text-gray-500">
@@ -79,7 +79,7 @@ const ActivityMini: React.FC<ActivityMiniProps> = ({ tips, onViewAll }) => {
               </span>
 
               <span className="flex-shrink-0 text-xs font-bold">
-                {truncateString(tip.from)}
+                {truncateString(tip.tipper)}
               </span>
 
               <span

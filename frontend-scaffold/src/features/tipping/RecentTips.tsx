@@ -34,7 +34,7 @@ const RecentTips: React.FC = () => {
   return (
     <div className="space-y-3">
       {tips.map((tip) => (
-        <div key={`${tip.from}-${tip.timestamp}`} className="border-2 border-black p-4">
+        <div key={tip.id} className="border-2 border-black p-4">
           <div className="flex items-center justify-between gap-4">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Supporter note</p>
             <AmountDisplay amount={tip.amount} />

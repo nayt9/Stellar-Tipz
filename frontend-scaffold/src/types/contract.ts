@@ -18,8 +18,9 @@ export interface Profile {
 
 /** Tip record from the contract */
 export interface Tip {
-  from: string;
-  to: string;
+  id: number;
+  tipper: string;
+  creator: string;
   amount: string; // i128 as string
   message: string;
   timestamp: number;

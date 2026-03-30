@@ -41,7 +41,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ address, limit = 5 }) => {
       <div className="grid gap-4 md:grid-cols-2">
         {tips.map((tip) => (
           <TipCard
-            key={`${tip.from}-${tip.timestamp}`}
+            key={tip.id}
             tip={tip}
             showSender={true}
             showReceiver={false}

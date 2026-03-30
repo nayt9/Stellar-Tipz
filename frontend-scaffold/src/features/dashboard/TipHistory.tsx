@@ -30,10 +30,10 @@ const formatDate = (timestamp: number): string => {
   });
 };
 
-const toCsv = (rows: Array<{ date: string; from: string; amount: string; message: string; txHash: string }>): string => {
-  const headers = ['Date', 'From', 'Amount (XLM)', 'Message', 'TX Hash'];
+const toCsv = (rows: Array<{ date: string; tipper: string; amount: string; message: string; txHash: string }>): string => {
+  const headers = ['Date', 'Tipper', 'Amount (XLM)', 'Message', 'TX Hash'];
   const escapeCell = (value: string): string => `"${value.replace(/"/g, '""')}"`;
-  const body = rows.map((row) => [row.date, row.from, row.amount, row.message, row.txHash].map(escapeCell).join(','));
+  const body = rows.map((row) => [row.date, row.tipper, row.amount, row.message, row.txHash].map(escapeCell).join(','));
   return [headers.join(','), ...body].join('\n');
 };
 
@@ -72,7 +72,7 @@ const TipHistory: React.FC = () => {
     const txHash = `T-${tip.timestamp.toString(16).toUpperCase()}`;
     return {
       date: formatDate(tip.timestamp),
-      from: truncateString(tip.from),
+      tipper: truncateString(tip.tipper),
       amount: stroopToXlm(tip.amount),
       message: tip.message || 'No message',
       txHash: (
@@ -93,7 +93,7 @@ const TipHistory: React.FC = () => {
     if (tableRows.length === 0) return;
     const exportRows = filteredAndSorted.map(tip => ({
       date: formatDate(tip.timestamp),
-      from: tip.from,
+      tipper: tip.tipper,
       amount: stroopToXlm(tip.amount),
       message: tip.message || '',
       txHash: `T-${tip.timestamp.toString(16).toUpperCase()}`
@@ -155,7 +155,7 @@ const TipHistory: React.FC = () => {
           <Table
             columns={[
               { key: 'date', label: 'Date' },
-              { key: 'from', label: 'From' },
+              { key: 'tipper', label: 'Tipper' },
               { key: 'amount', label: 'Amount (XLM)', align: 'right' },
               { key: 'message', label: 'Message' },
               { key: 'txHash', label: 'ID' },

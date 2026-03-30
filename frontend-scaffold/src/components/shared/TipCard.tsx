@@ -37,10 +37,10 @@ const TipCard: React.FC<TipCardProps> = ({
   showSender = true,
   showReceiver = true,
 }) => {
-  const primaryAddress = showSender ? tip.from : tip.to;
+  const primaryAddress = showSender ? tip.tipper : tip.creator;
   const primaryLabel = showSender ? "From" : "To";
   const secondaryAddress =
-    showSender && showReceiver ? tip.to : showReceiver ? tip.from : null;
+    showSender && showReceiver ? tip.creator : showReceiver ? tip.tipper : null;
   const secondaryLabel =
     showSender && showReceiver ? "To" : showReceiver ? "From" : null;
 

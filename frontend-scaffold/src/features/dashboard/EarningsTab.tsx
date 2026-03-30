@@ -36,7 +36,7 @@ const EarningsTab: React.FC = () => {
       const net = gross - fee;
 
       return {
-        id: `${tip.from}-${tip.timestamp}`,
+        id: `${tip.id}-${tip.timestamp}`,
         createdAt: tip.timestamp - (index + 1) * 12 * 60 * 60,
         gross: gross.toString(),
         fee: fee.toString(),

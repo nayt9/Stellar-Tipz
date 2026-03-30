@@ -34,7 +34,7 @@ export const useTips = (address: string, role: 'creator' | 'tipper' = 'creator',
     // Mock fallback
     if (env.useMockData) {
       const filteredMocks = mockTips.filter(t => 
-        role === 'creator' ? t.to === address : t.from === address
+        role === 'creator' ? t.creator === address : t.tipper === address
       );
       setTips(filteredMocks.slice(0, isLoadMore ? offset + limit : limit));
       setTotalCount(filteredMocks.length);
