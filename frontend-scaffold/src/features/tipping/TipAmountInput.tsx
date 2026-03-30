@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { env } from "../../helpers/env";
-import { useWallet } from "../../hooks";
+import { useWallet, useContract } from "../../hooks";
 
 interface TipAmountInputProps {
   amount: string;
@@ -12,11 +12,15 @@ interface TipAmountInputProps {
 }
 
 const QUICK_AMOUNTS = ["1", "5", "10", "25", "50"];
+const DEFAULT_MIN_TIP_XLM = "0.1"; // 1,000,000 stroops
 
 const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balance }) => {
   const { connected, publicKey } = useWallet();
+  const { getMinTipAmount } = useContract();
   const [useCustom, setUseCustom] = useState(!QUICK_AMOUNTS.includes(amount));
   const [fetchedBalance, setFetchedBalance] = useState<string>("");
+  const [minTipXlm, setMinTipXlm] = useState<string>(DEFAULT_MIN_TIP_XLM);
+  const [loadingMinTip, setLoadingMinTip] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -57,9 +61,41 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
     };
   }, [connected, publicKey]);
 
+  // Fetch minimum tip amount from contract
+  useEffect(() => {
+    let active = true;
+
+    const fetchMinTip = async () => {
+      setLoadingMinTip(true);
+      try {
+        const minTip = await getMinTipAmount();
+        if (active) {
+          setMinTipXlm(minTip);
+        }
+      } catch (err) {
+        console.error("Failed to fetch minimum tip amount:", err);
+        // Use default if fetch fails
+        if (active) {
+          setMinTipXlm(DEFAULT_MIN_TIP_XLM);
+        }
+      } finally {
+        if (active) {
+          setLoadingMinTip(false);
+        }
+      }
+    };
+
+    void fetchMinTip();
+
+    return () => {
+      active = false;
+    };
+  }, [getMinTipAmount]);
+
   const effectiveBalance = balance ?? fetchedBalance;
   const numericAmount = Number(amount);
   const numericBalance = Number(effectiveBalance);
+  const numericMinTip = Number(minTipXlm);
 
   const amountError = useMemo(() => {
     if (!amount.trim()) {
@@ -74,12 +110,16 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
       return "Amount must be greater than 0.";
     }
 
+    if (numericAmount < numericMinTip) {
+      return `Minimum tip is ${minTipXlm} XLM.`;
+    }
+
     if (connected && effectiveBalance && !Number.isNaN(numericBalance) && numericAmount > numericBalance) {
       return "Amount exceeds your available XLM balance.";
     }
 
     return undefined;
-  }, [amount, connected, effectiveBalance, numericAmount, numericBalance]);
+  }, [amount, connected, effectiveBalance, numericAmount, numericBalance, minTipXlm, numericMinTip]);
 
   return (
     <div className="space-y-4">

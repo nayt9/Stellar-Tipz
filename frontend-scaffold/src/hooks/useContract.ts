@@ -26,6 +26,7 @@ import {
   getCreditTier as calculateCreditTier,
 } from '../types/contract';
 import { ProfileFormData } from '../types/profile';
+import { xlmToStroop } from '../helpers/format';
 
 /**
  * Safely converts a numeric string to a BigInt.
@@ -113,6 +114,24 @@ export const useContract = () => {
       .build();
 
     return simulateTx<ContractStats>(tx, server);
+  }, [contractId, wallet.publicKey, server]);
+
+  const getMinTipAmount = useCallback(async (): Promise<string> => {
+    const contract = new Contract(contractId);
+    const txBuilder = await getTxBuilder(
+      wallet.publicKey || "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+      BASE_FEE,
+      server,
+      TESTNET_DETAILS.networkPassphrase
+    );
+    const tx = txBuilder
+      .addOperation(contract.call("get_min_tip_amount"))
+      .setTimeout(TimeoutInfinite)
+      .build();
+
+    const minTipStroops = await simulateTx<number>(tx, server);
+    // Convert stroops to XLM string for display
+    return (minTipStroops / 1e7).toString();
   }, [contractId, wallet.publicKey, server]);
 
   const getRecentTips = useCallback(async (creator: string, limit: number, offset: number): Promise<Tip[]> => {
@@ -281,13 +300,16 @@ export const useContract = () => {
       TESTNET_DETAILS.networkPassphrase
     );
 
+    // Convert XLM amount to stroops before sending to contract
+    const stroopAmount = xlmToStroop(amount).toString();
+
     const tx = txBuilder
       .addOperation(
         contract.call(
           "send_tip",
           accountToScVal(wallet.publicKey),
           accountToScVal(creator),
-          numberToI128(safeStringToBigInt(amount)),
+          numberToI128(safeStringToBigInt(stroopAmount)),
           nativeToScVal(message)
         )
       )
@@ -310,12 +332,15 @@ export const useContract = () => {
       TESTNET_DETAILS.networkPassphrase
     );
 
+    // Convert XLM amount to stroops before sending to contract
+    const stroopAmount = xlmToStroop(amount).toString();
+
     const tx = txBuilder
       .addOperation(
         contract.call(
           "withdraw_tips",
           accountToScVal(wallet.publicKey),
-          numberToI128(safeStringToBigInt(amount))
+          numberToI128(safeStringToBigInt(stroopAmount))
         )
       )
       .setTimeout(TimeoutInfinite)
@@ -331,6 +356,7 @@ export const useContract = () => {
     getProfileByUsername,
     getLeaderboard,
     getStats,
+    getMinTipAmount,
     getRecentTips,
     getCreatorTipCount,
     getTipsByTipper,

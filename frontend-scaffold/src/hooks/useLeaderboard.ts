@@ -44,16 +44,38 @@ export const useLeaderboard = (): LeaderboardData => {
       const cached = sessionStorage.getItem(CACHE_KEY);
       if (!cached) return null;
 
-      const { entries: cachedEntries, timestamp }: CacheData =
-        JSON.parse(cached);
-      const isExpired = Date.now() - timestamp > CACHE_DURATION_MS;
+      const parsed = JSON.parse(cached);
+
+      // Validate cache schema
+      if (
+        !parsed ||
+        !Array.isArray(parsed.entries) ||
+        typeof parsed.timestamp !== 'number'
+      ) {
+        sessionStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      // Validate entries have required fields
+      if (!parsed.entries.every((entry: any) =>
+        entry &&
+        typeof entry.address === 'string' &&
+        typeof entry.username === 'string' &&
+        typeof entry.totalTipsReceived === 'string' &&
+        typeof entry.creditScore === 'number'
+      )) {
+        sessionStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      const isExpired = Date.now() - parsed.timestamp > CACHE_DURATION_MS;
 
       if (isExpired) {
         sessionStorage.removeItem(CACHE_KEY);
         return null;
       }
 
-      return cachedEntries;
+      return parsed.entries;
     } catch {
       sessionStorage.removeItem(CACHE_KEY);
       return null;

@@ -19,6 +19,9 @@ import OverviewTab from "./OverviewTab";
 import SettingsTab from "./SettingsTab";
 import TipsTab from "./TipsTab";
 
+// Number of tips to display in preview sections
+const TIPS_PREVIEW = 5;
+
 const DashboardPage: React.FC = () => {
   usePageTitle("Dashboard");
 
