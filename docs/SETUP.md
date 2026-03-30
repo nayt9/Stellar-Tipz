@@ -10,8 +10,8 @@ Complete guide to setting up Stellar Tipz for local development.
 |------|---------|---------|
 | **Node.js** | 18+ | Frontend build tooling |
 | **npm** | 9+ | Package management |
-| **Rust** | 1.74+ | Smart contract development |
-| **Cargo** | 1.74+ | Rust package manager |
+| **Rust** | 1.88+ | Smart contract development |
+| **Cargo** | 1.88+ | Rust package manager |
 | **Soroban CLI** | 21.0+ | Contract build, deploy, invoke |
 | **Git** | 2.30+ | Version control |
 | **Freighter** | Latest | Stellar wallet (browser extension) |
