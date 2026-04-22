@@ -136,6 +136,10 @@ const TipPage: React.FC = () => {
             <h2 className="mt-2 text-2xl font-black uppercase">Tip in XLM</h2>
           </div>
 
+          <div className="border-2 border-black bg-yellow-100 p-4 text-sm font-bold text-gray-800">
+            Any connected wallet can send a tip. Supporters do not need to create a Stellar Tipz profile first.
+          </div>
+
           {!connected && (
             <div className="border-2 border-black bg-orange-100 p-4 text-sm font-bold">
               Connect a wallet before signing the transaction.
@@ -153,12 +157,12 @@ const TipPage: React.FC = () => {
             />
           ) : (
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <TipAmountInput amount={amount} onChange={setAmount} balance={creator.balance} />
+              <TipAmountInput amount={amount} onChange={setAmount} />
 
               <Textarea
                 label="Message"
                 placeholder="Say why you are supporting this creator."
-                maxLength={160}
+                maxLength={280}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
               />

@@ -11,7 +11,7 @@ interface TipMessageInputProps {
 const TipMessageInput: React.FC<TipMessageInputProps> = ({
   message,
   onChange,
-  maxLength = 160,
+  maxLength = 280,
   disabled = false,
 }) => {
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {

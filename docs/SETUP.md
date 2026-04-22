@@ -109,6 +109,10 @@ npm run dev
 
 The app will be available at **http://localhost:3000**.
 
+`npm run dev` is the recommended Vite workflow for local development in this
+repo. `npm start` is only an alias to `vite`, so docs and examples should use
+the Vite-style command above.
+
 ---
 
 ## 4. Freighter Wallet Setup

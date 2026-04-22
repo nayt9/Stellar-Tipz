@@ -35,7 +35,6 @@ const TipForm: React.FC<TipFormProps> = ({ creator, onSubmit, isSubmitting = fal
       <TipAmountInput 
         amount={amount} 
         onChange={setAmount} 
-        balance={creator.balance} 
       />
 
       <TipMessageInput 

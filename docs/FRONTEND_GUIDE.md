@@ -276,6 +276,9 @@ Defined in `tailwind.config.js`:
 
 ## Routing
 
+`App.tsx` mounts `BrowserRouter` and calls `useRoutes(routes)`, while the
+route definitions themselves live in `routes.tsx`.
+
 ```typescript
 // routes.tsx
 import { createBrowserRouter } from 'react-router-dom';

@@ -1,26 +1,33 @@
-import React, { useEffect, useMemo, useState } from "react";
+import BigNumber from "bignumber.js";
+import React, { useEffect, useState } from "react";
 
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { env } from "../../helpers/env";
+import { stroopToXlm, xlmToStroop } from "../../helpers/format";
 import { useWallet, useContract } from "../../hooks";
+import { BASE_FEE } from "../../services";
 
 interface TipAmountInputProps {
   amount: string;
   onChange: (amount: string) => void;
-  balance?: string;
 }
 
 const QUICK_AMOUNTS = ["1", "5", "10", "25", "50"];
 const DEFAULT_MIN_TIP_XLM = "0.1"; // 1,000,000 stroops
+const ESTIMATED_NETWORK_FEE_XLM = new BigNumber(stroopToXlm(BASE_FEE, 5));
 
-const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balance }) => {
+const formatXlmDisplay = (value: BigNumber): string => {
+  const decimalPlaces = value.decimalPlaces() ?? 0;
+  return value.toFormat(Math.min(7, Math.max(2, decimalPlaces)));
+};
+
+const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange }) => {
   const { connected, publicKey } = useWallet();
   const { getMinTipAmount } = useContract();
   const [useCustom, setUseCustom] = useState(!QUICK_AMOUNTS.includes(amount));
   const [fetchedBalance, setFetchedBalance] = useState<string>("");
   const [minTipXlm, setMinTipXlm] = useState<string>(DEFAULT_MIN_TIP_XLM);
-  const [loadingMinTip, setLoadingMinTip] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -66,7 +73,6 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
     let active = true;
 
     const fetchMinTip = async () => {
-      setLoadingMinTip(true);
       try {
         const minTip = await getMinTipAmount();
         if (active) {
@@ -78,10 +84,6 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
         if (active) {
           setMinTipXlm(DEFAULT_MIN_TIP_XLM);
         }
-      } finally {
-        if (active) {
-          setLoadingMinTip(false);
-        }
       }
     };
 
@@ -92,34 +94,42 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
     };
   }, [getMinTipAmount]);
 
-  const effectiveBalance = balance ?? fetchedBalance;
+  const effectiveBalance = fetchedBalance;
   const numericAmount = Number(amount);
   const numericBalance = Number(effectiveBalance);
   const numericMinTip = Number(minTipXlm);
+  const amountBigNumber = Number.isNaN(numericAmount)
+    ? new BigNumber(0)
+    : new BigNumber(amount || "0");
+  const amountInStroops = Number.isNaN(numericAmount) || numericAmount <= 0
+    ? null
+    : xlmToStroop(amount);
+  const totalCost = amountBigNumber.plus(ESTIMATED_NETWORK_FEE_XLM);
+  const balanceBigNumber = !effectiveBalance || Number.isNaN(numericBalance)
+    ? null
+    : new BigNumber(effectiveBalance);
 
-  const amountError = useMemo(() => {
-    if (!amount.trim()) {
-      return "Enter a tip amount.";
-    }
+  let amountError: string | undefined;
 
-    if (Number.isNaN(numericAmount)) {
-      return "Amount must be numeric.";
-    }
-
-    if (numericAmount <= 0) {
-      return "Amount must be greater than 0.";
-    }
-
-    if (numericAmount < numericMinTip) {
-      return `Minimum tip is ${minTipXlm} XLM.`;
-    }
-
-    if (connected && effectiveBalance && !Number.isNaN(numericBalance) && numericAmount > numericBalance) {
-      return "Amount exceeds your available XLM balance.";
-    }
-
-    return undefined;
-  }, [amount, connected, effectiveBalance, numericAmount, numericBalance, minTipXlm, numericMinTip]);
+  if (!amount.trim()) {
+    amountError = "Enter a tip amount.";
+  } else if (Number.isNaN(numericAmount)) {
+    amountError = "Amount must be numeric.";
+  } else if (numericAmount <= 0) {
+    amountError = "Amount must be greater than 0.";
+  } else if (numericAmount < numericMinTip) {
+    amountError = `Minimum tip is ${minTipXlm} XLM.`;
+  } else if (
+    connected &&
+    effectiveBalance &&
+    !Number.isNaN(numericBalance) &&
+    numericAmount > numericBalance
+  ) {
+    amountError = "Amount exceeds your available XLM balance.";
+  } else if (connected && balanceBigNumber && totalCost.gt(balanceBigNumber)) {
+    amountError =
+      "Total cost exceeds your available XLM balance once network fees are included.";
+  }
 
   return (
     <div className="space-y-4">
@@ -178,6 +188,50 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
       {!useCustom && amountError && (
         <p className="text-sm font-medium text-red-600">{amountError}</p>
       )}
+
+      <div className="space-y-3 border-2 border-black bg-white p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">
+            Payment summary
+          </p>
+          <p className="text-[11px] font-bold text-gray-500">
+            Estimated before signing
+          </p>
+        </div>
+
+        <dl className="space-y-2 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="font-bold text-gray-600">Tip amount</dt>
+            <dd className="text-right font-black tabular-nums">
+              {formatXlmDisplay(amountBigNumber)} XLM
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="font-bold text-gray-600">Tip amount (stroops)</dt>
+            <dd className="text-right font-bold tabular-nums text-gray-700">
+              {amountInStroops ? amountInStroops.toFormat(0) : "0"}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="font-bold text-gray-600">Estimated network fee</dt>
+            <dd className="text-right font-bold tabular-nums text-gray-700">
+              {formatXlmDisplay(ESTIMATED_NETWORK_FEE_XLM)} XLM
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t-2 border-dashed border-black pt-2">
+            <dt className="font-black uppercase tracking-wide">Total cost</dt>
+            <dd className="text-right font-black tabular-nums">
+              {formatXlmDisplay(totalCost)} XLM
+            </dd>
+          </div>
+        </dl>
+
+        {connected && balanceBigNumber && totalCost.gt(balanceBigNumber) && (
+          <p className="border-2 border-red-600 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+            This tip total is higher than your current wallet balance.
+          </p>
+        )}
+      </div>
 
       <p className="text-sm font-bold text-gray-600">
         Your balance: {effectiveBalance ? `${Number(effectiveBalance).toLocaleString()} XLM` : "Connect wallet to load balance"}
