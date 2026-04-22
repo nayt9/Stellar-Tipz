@@ -1,16 +1,16 @@
 # Smart Contract Specification
 
-> Complete technical specification for the Stellar Tipz Soroban smart contract.
+> Technical reference for the Stellar Tipz Soroban smart contract.
 
 ---
 
 ## Overview
 
-The Tipz contract manages creator profiles, tip transactions, balance accounting, credit scores, and a leaderboard — all on-chain via Stellar's Soroban runtime.
+The Tipz contract manages creator profiles, XLM tipping, withdrawal accounting,
+credit scoring, and leaderboard state directly on Soroban.
 
-**Contract ID**: TBD (deployed to Testnet)  
 **Language**: Rust (Soroban SDK)  
-**Network**: Stellar Testnet → Mainnet  
+**Network target**: Stellar Testnet -> Mainnet
 
 ---
 
@@ -20,23 +20,22 @@ The Tipz contract manages creator profiles, tip transactions, balance accounting
 
 ```rust
 #[contracttype]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Profile {
-    pub owner: Address,           // Stellar address of the creator
-    pub username: String,         // Unique @username (lowercase, alphanumeric + underscore)
-    pub display_name: String,     // Display name (max 64 chars)
-    pub bio: String,              // Short bio (max 280 chars)
-    pub image_url: String,        // IPFS CID or URL for profile image
-    pub x_handle: String,         // X (Twitter) handle
-    pub x_followers: u32,         // Follower count (updated off-chain)
-    pub x_posts: u32,             // Post count
-    pub x_replies: u32,           // Reply count
-    pub credit_score: u32,        // Calculated score (0-1000)
-    pub total_tips_received: i128,// Lifetime tips received (in stroops)
-    pub total_tips_count: u32,    // Number of tips received
-    pub balance: i128,            // Current withdrawable balance (in stroops)
-    pub registered_at: u64,       // Ledger timestamp of registration
-    pub updated_at: u64,          // Last update timestamp
+    pub owner: Address,            // Stellar address of the creator
+    pub username: String,          // Unique username (3-32 chars, lowercase)
+    pub display_name: String,      // Display name (1-64 chars)
+    pub bio: String,               // Bio (0-280 chars)
+    pub image_url: String,         // Profile image URL or IPFS CID
+    pub x_handle: String,          // X handle
+    pub x_followers: u32,          // X follower count
+    pub x_engagement_avg: u32,     // Average X engagement per post
+    pub credit_score: u32,         // Current credit score (0-100)
+    pub total_tips_received: i128, // Lifetime tips received in stroops
+    pub total_tips_count: u32,     // Number of tips received
+    pub balance: i128,             // Current withdrawable balance in stroops
+    pub registered_at: u64,        // Ledger timestamp of registration
+    pub updated_at: u64,           // Last profile update timestamp
 }
 ```
 
@@ -46,12 +45,12 @@ pub struct Profile {
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct Tip {
-    pub id: u32,              // Unique tip ID
-    pub tipper: Address,      // Tipper's address
-    pub creator: Address,     // Creator's address
-    pub amount: i128,         // Tip amount (in stroops)
-    pub message: String,      // Optional message (max 280 chars)
-    pub timestamp: u64,       // Timestamp of the tip
+    pub id: u32,          // Global tip id
+    pub tipper: Address,  // Sender address
+    pub creator: Address, // Recipient address
+    pub amount: i128,     // Tip amount in stroops
+    pub message: String,  // Optional message
+    pub timestamp: u64,   // Ledger timestamp
 }
 ```
 
@@ -68,217 +67,11 @@ pub struct LeaderboardEntry {
 }
 ```
 
-### DataKey (Storage Keys)
+### ContractStats
 
 ```rust
 #[contracttype]
-pub enum DataKey {
-    Admin,                     // Address — contract admin
-    FeePercent,               // u32 — withdrawal fee (basis points, e.g., 200 = 2%)
-    FeeCollector,             // Address — receives collected fees
-    TotalFeesCollected,       // i128 — lifetime fees collected
-    Profile(Address),         // Profile struct for a creator
-    UsernameToAddress(String),// Reverse lookup: username → address
-    TipCount,                // u32 — global tip counter
-    Tip(u32),                // Individual tip record by index
-    Leaderboard,             // Vec<LeaderboardEntry> — top creators
-    TotalCreators,           // u32 — total registered creators
-    TotalTipsVolume,         // i128 — lifetime tip volume
-}
-```
-
----
-
-## Public Functions
-
-### Initialization
-
-#### `initialize(admin: Address, fee_collector: Address, fee_bps: u32)`
-
-Initializes the contract. Can only be called once.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `admin` | `Address` | Admin address (can update config) |
-| `fee_collector` | `Address` | Address that receives withdrawal fees |
-| `fee_bps` | `u32` | Fee in basis points (200 = 2%) |
-
-**Errors**: `AlreadyInitialized`
-
----
-
-### Profile Management
-
-#### `register_profile(caller: Address, username: String, display_name: String, bio: String, image_url: String, x_handle: String)`
-
-Register a new creator profile.
-
-| Parameter | Type | Constraints |
-|-----------|------|-------------|
-| `caller` | `Address` | Must authorize |
-| `username` | `String` | 3-32 chars, lowercase alphanumeric + underscore, unique |
-| `display_name` | `String` | 1-64 chars |
-| `bio` | `String` | 0-280 chars |
-| `image_url` | `String` | 0-256 chars |
-| `x_handle` | `String` | 0-32 chars |
-
-**Returns**: `Profile`  
-**Errors**: `AlreadyRegistered`, `UsernameTaken`, `InvalidUsername`, `InvalidDisplayName`
-
----
-
-#### `update_profile(caller: Address, display_name: Option<String>, bio: Option<String>, image_url: Option<String>, x_handle: Option<String>)`
-
-Update an existing profile. Only the profile owner can call this.
-
-**Errors**: `NotRegistered`, `InvalidDisplayName`
-
----
-
-#### `update_x_metrics(caller: Address, target: Address, followers: u32, posts: u32, replies: u32)`
-
-Update X (Twitter) metrics for a profile. Admin-only (metrics are fetched off-chain).
-
-**Errors**: `NotAdmin`, `NotRegistered`
-
----
-
-#### `get_profile(address: Address) → Profile`
-
-Read a creator's profile.
-
-**Errors**: `NotRegistered`
-
----
-
-#### `get_profile_by_username(username: String) → Profile`
-
-Look up a profile by username.
-
-**Errors**: `NotFound`
-
----
-
-### Tipping
-
-#### `send_tip(tipper: Address, creator: Address, amount: i128, message: String)`
-
-Send an XLM tip to a registered creator.
-
-| Parameter | Type | Constraints |
-|-----------|------|-------------|
-| `tipper` | `Address` | Must authorize, cannot tip self |
-| `creator` | `Address` | Must be registered |
-| `amount` | `i128` | > 0, in stroops (1 XLM = 10,000,000 stroops) |
-| `message` | `String` | 0-280 chars |
-
-**Flow**:
-1. Validate tipper authorization
-2. Validate creator is registered
-3. Validate amount > 0
-4. Transfer XLM from tipper to contract
-5. Credit creator's balance
-6. Update tip stats (count, volume)
-7. Store tip record
-8. Update leaderboard if applicable
-9. Emit `TipSent` event
-
-**Errors**: `NotRegistered`, `InvalidAmount`, `CannotTipSelf`, `InsufficientBalance`
-
----
-
-#### `withdraw_tips(caller: Address, amount: i128)`
-
-Withdraw accumulated tips. A percentage fee is deducted.
-
-| Parameter | Type | Constraints |
-|-----------|------|-------------|
-| `caller` | `Address` | Must authorize, must be registered |
-| `amount` | `i128` | > 0, ≤ caller's balance |
-
-**Flow**:
-1. Validate caller authorization
-2. Validate caller is registered
-3. Validate amount ≤ balance
-4. Calculate fee: `amount × fee_bps / 10000`
-5. Transfer `amount - fee` to caller
-6. Transfer `fee` to fee collector
-7. Deduct `amount` from caller's balance
-8. Emit `TipsWithdrawn` event
-
-**Errors**: `NotRegistered`, `InvalidAmount`, `InsufficientBalance`
-
----
-
-### Credit Score
-
-#### `calculate_credit_score(address: Address) → u32`
-
-Calculate and store the credit score for a profile.
-
-**Formula**:
-```
-follower_score = min(followers / 10, 500) × 50%
-activity_score = min((posts + replies × 1.5) / 5, 300) × 30%
-base_score     = 200 × 20%
-
-credit_score   = follower_score + activity_score + base_score
-max            = 1000
-```
-
-**Tiers**:
-| Range | Tier |
-|-------|------|
-| 0-400 | Bronze |
-| 401-700 | Silver |
-| 701-900 | Gold |
-| 901-1000 | Diamond |
-
----
-
-### Leaderboard
-
-#### `get_leaderboard(limit: u32) → Vec<LeaderboardEntry>`
-
-Get the top creators by total tips received.
-
-| Parameter | Type | Constraints |
-|-----------|------|-------------|
-| `limit` | `u32` | 1-100 |
-
----
-
-### Admin
-
-#### `set_fee(caller: Address, fee_bps: u32)`
-
-Update the withdrawal fee. Admin-only.
-
-| Parameter | Type | Constraints |
-|-----------|------|-------------|
-| `fee_bps` | `u32` | 0-1000 (0-10%) |
-
-**Errors**: `NotAdmin`, `InvalidFee`
-
----
-
-#### `set_fee_collector(caller: Address, new_collector: Address)`
-
-Update the fee collector address. Admin-only.
-
----
-
-#### `set_admin(caller: Address, new_admin: Address)`
-
-Transfer admin role. Admin-only.
-
----
-
-#### `get_stats() → ContractStats`
-
-Get global contract statistics.
-
-```rust
+#[derive(Clone, Debug)]
 pub struct ContractStats {
     pub total_creators: u32,
     pub total_tips_count: u32,
@@ -288,57 +81,227 @@ pub struct ContractStats {
 }
 ```
 
+### ContractConfig
+
+```rust
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ContractConfig {
+    pub admin: Address,
+    pub fee_collector: Address,
+    pub fee_bps: u32,
+    pub native_token: Address,
+    pub total_creators: u32,
+    pub total_tips_count: u32,
+    pub total_tips_volume: i128,
+    pub total_fees_collected: i128,
+    pub is_initialized: bool,
+    pub version: u32,
+}
+```
+
+### DataKey (Storage Keys)
+
+The current contract defines **21 `DataKey` variants** across Soroban's
+`instance`, `persistent`, and `temporary` storage tiers.
+
+| DataKey                     | Storage tier | Stored value            | Purpose                                                          |
+| --------------------------- | ------------ | ----------------------- | ---------------------------------------------------------------- |
+| `Admin`                     | Instance     | `Address`               | Current contract admin                                           |
+| `FeePercent`                | Instance     | `u32`                   | Withdrawal fee in basis points                                   |
+| `FeeCollector`              | Instance     | `Address`               | Address that receives protocol fees                              |
+| `ContractVersion`           | Instance     | `u32`                   | On-chain interface version written at init and bumped on upgrade |
+| `TotalFeesCollected`        | Instance     | `i128`                  | Lifetime protocol fees collected                                 |
+| `Profile(Address)`          | Persistent   | `Profile`               | Creator profile keyed by owner address                           |
+| `UsernameToAddress(String)` | Persistent   | `Address`               | Reverse lookup from username to creator address                  |
+| `TipCount`                  | Instance     | `u32`                   | Global monotonic tip counter                                     |
+| `Tip(u32)`                  | Temporary    | `Tip`                   | Individual tip record by global tip id                           |
+| `Leaderboard`               | Instance     | `Vec<LeaderboardEntry>` | Cached top-creators leaderboard                                  |
+| `TotalCreators`             | Instance     | `u32`                   | Total registered creators                                        |
+| `TotalTipsVolume`           | Instance     | `i128`                  | Lifetime tip volume                                              |
+| `Initialized`               | Instance     | `bool`                  | One-time initialization guard                                    |
+| `NativeToken`               | Instance     | `Address`               | Native XLM SAC address used for transfers                        |
+| `Paused`                    | Instance     | `bool`                  | Emergency pause flag                                             |
+| `MinTipAmount`              | Instance     | `i128`                  | Minimum allowed tip amount in stroops                            |
+| `TipperTipCount(Address)`   | Temporary    | `u32`                   | Number of tips sent by a specific tipper                         |
+| `TipperTip(Address, u32)`   | Temporary    | `u32`                   | Reverse index from `(tipper, local_index)` to global tip id      |
+| `CreatorTipCount(Address)`  | Temporary    | `u32`                   | Number of tips received by a specific creator                    |
+| `CreatorTip(Address, u32)`  | Temporary    | `u32`                   | Reverse index from `(creator, local_index)` to global tip id     |
+| `PendingAdmin`              | Instance     | `Address`               | Proposed admin during the two-step admin transfer flow           |
+
 ---
 
-## Events
+## Public Functions
 
-| Event | Fields | When |
-|-------|--------|------|
-| `ProfileRegistered` | `(address, username)` | New profile created |
-| `ProfileUpdated` | `(address)` | Profile info changed |
-| `TipSent` | `(from, to, amount, message)` | Tip successfully sent |
-| `TipsWithdrawn` | `(address, amount, fee)` | Tips withdrawn |
-| `CreditScoreUpdated` | `(address, old_score, new_score)` | Score recalculated |
-| `AdminChanged` | `(old_admin, new_admin)` | Admin role transferred |
-| `FeeUpdated` | `(old_fee, new_fee)` | Fee percentage changed |
+### Initialization
 
----
+#### `initialize(admin: Address, fee_collector: Address, fee_bps: u32, native_token: Address)`
 
-## Error Codes
+Initializes the contract. This can only be called once.
 
-| Code | Name | Description |
-|------|------|-------------|
-| 1 | `AlreadyInitialized` | Contract already initialized |
-| 2 | `NotInitialized` | Contract not yet initialized |
-| 3 | `NotAdmin` | Caller is not the admin |
-| 4 | `AlreadyRegistered` | Address already has a profile |
-| 5 | `NotRegistered` | Address does not have a profile |
-| 6 | `UsernameTaken` | Username already in use |
-| 7 | `InvalidUsername` | Username format invalid |
-| 8 | `InvalidDisplayName` | Display name too long or empty |
-| 9 | `InvalidAmount` | Tip/withdrawal amount invalid |
-| 10 | `InsufficientBalance` | Not enough balance to withdraw |
-| 11 | `CannotTipSelf` | Cannot send tip to own profile |
-| 12 | `InvalidFee` | Fee exceeds maximum allowed |
-| 13 | `MessageTooLong` | Tip message exceeds 280 chars |
-| 14 | `NotFound` | Username not found |
+| Parameter       | Type      | Description                                   |
+| --------------- | --------- | --------------------------------------------- |
+| `admin`         | `Address` | Admin address                                 |
+| `fee_collector` | `Address` | Address that receives withdrawal fees         |
+| `fee_bps`       | `u32`     | Fee in basis points                           |
+| `native_token`  | `Address` | Stellar Asset Contract address for native XLM |
+
+**Errors**: `AlreadyInitialized`, `InvalidFee`
+
+### Profile Management
+
+#### `register_profile(caller, username, display_name, bio, image_url, x_handle) -> Profile`
+
+Registers a new creator profile.
+
+#### `update_profile(caller, display_name, bio, image_url, x_handle)`
+
+Updates an existing creator profile.
+
+#### `deregister_profile(caller)`
+
+Removes a creator profile. Caller must be registered, have zero balance, and
+the contract must not be paused.
+
+#### `get_profile(address) -> Profile`
+
+Returns a profile by owner address.
+
+#### `get_profile_by_username(username) -> Profile`
+
+Returns a profile by username.
+
+### Tipping
+
+#### `send_tip(tipper, creator, amount, message)`
+
+Transfers native XLM from the tipper to the contract, credits the creator,
+stores a temporary tip record, updates counters, and refreshes leaderboard
+state.
+
+#### `withdraw_tips(caller, amount)`
+
+Withdraws part or all of the creator's balance. The contract computes the fee
+as `amount * fee_bps / 10000`, transfers the net payout to the creator, and
+sends the fee to the fee collector.
+
+#### `get_tip(tip_id) -> Tip`
+
+Fetches one tip record by global tip id.
+
+#### `get_recent_tips(creator, limit, offset) -> Vec<Tip>`
+
+Fetches recent tips for a creator, newest first, skipping expired temporary
+entries.
+
+#### `get_tips_by_tipper(tipper, limit) -> Vec<Tip>`
+
+Fetches recent tips sent by a specific tipper.
+
+#### `get_creator_tip_count(creator) -> u32`
+
+Returns how many tips a creator has received.
+
+#### `get_tipper_tip_count(tipper) -> u32`
+
+Returns how many tips a tipper has sent.
+
+### Credit and Leaderboard
+
+#### `get_credit_tier(address) -> CreditTier`
+
+Returns the creator's current credit tier derived from their on-chain score.
+
+#### `get_credit_breakdown(address) -> CreditBreakdown`
+
+Returns the component-level breakdown of the creator's score.
+
+#### `get_leaderboard(limit) -> Vec<LeaderboardEntry>`
+
+Returns the top creators by total tips received.
+
+### Admin and Config
+
+#### `get_stats() -> ContractStats`
+
+Returns aggregate platform statistics.
+
+#### `get_config() -> ContractConfig`
+
+Returns the full contract configuration, including admin and native token.
+
+#### `set_fee(caller, fee_bps)`
+
+Updates the withdrawal fee. Admin-only.
+
+#### `set_fee_collector(caller, new_collector)`
+
+Updates the fee collector. Admin-only.
+
+#### `set_admin(caller, new_admin)`
+
+Immediate admin transfer. Admin-only.
+
+#### `propose_admin(caller, new_admin)`
+
+Starts a two-step admin transfer. Admin-only.
+
+#### `accept_admin(caller)`
+
+Accepts a pending admin transfer. Callable only by the pending admin.
+
+#### `cancel_admin_proposal(caller)`
+
+Cancels the pending admin transfer. Admin-only.
+
+#### `pause_contract(caller)` / `unpause_contract(caller)`
+
+Toggles the emergency pause flag. Admin-only.
+
+#### `set_min_tip_amount(caller, amount)` / `get_min_tip_amount() -> i128`
+
+Updates or reads the minimum allowed tip amount.
+
+#### `update_x_metrics(caller, creator, x_followers, x_engagement_avg)`
+
+Updates creator X metrics. Admin-only.
+
+#### `batch_update_x_metrics(caller, updates) -> Vec<BatchSkip>`
+
+Batch updates X metrics for multiple creators. Admin-only.
+
+#### `batch_update_x_metrics_preview(caller, updates) -> Vec<BatchSkip>`
+
+Dry-run preview for batch X metric updates. Admin-only.
 
 ---
 
 ## Storage Layout
 
-| Key | Type | TTL |
-|-----|------|-----|
-| `DataKey::Admin` | `Address` | Persistent |
-| `DataKey::FeePercent` | `u32` | Persistent |
-| `DataKey::FeeCollector` | `Address` | Persistent |
-| `DataKey::Profile(addr)` | `Profile` | Persistent |
-| `DataKey::UsernameToAddress(name)` | `Address` | Persistent |
-| `DataKey::TipCount` | `u32` | Persistent |
-| `DataKey::Tip(index)` | `Tip` | Temporary (30 days) |
-| `DataKey::Leaderboard` | `Vec<LeaderboardEntry>` | Persistent |
-| `DataKey::TotalCreators` | `u32` | Persistent |
-| `DataKey::TotalTipsVolume` | `i128` | Persistent |
-| `DataKey::TotalFeesCollected` | `i128` | Persistent |
+| Key                                | Type                    | Tier / TTL behavior                             |
+| ---------------------------------- | ----------------------- | ----------------------------------------------- |
+| `DataKey::Admin`                   | `Address`               | Instance, bumped with contract writes           |
+| `DataKey::FeePercent`              | `u32`                   | Instance, bumped with contract writes           |
+| `DataKey::FeeCollector`            | `Address`               | Instance, bumped with contract writes           |
+| `DataKey::ContractVersion`         | `u32`                   | Instance, bumped with contract writes           |
+| `DataKey::TotalFeesCollected`      | `i128`                  | Instance, bumped with contract writes           |
+| `DataKey::Profile(addr)`           | `Profile`               | Persistent, refreshed on profile activity       |
+| `DataKey::UsernameToAddress(name)` | `Address`               | Persistent, refreshed alongside `Profile(addr)` |
+| `DataKey::TipCount`                | `u32`                   | Instance, bumped with contract writes           |
+| `DataKey::Tip(index)`              | `Tip`                   | Temporary, approximately 7-day TTL              |
+| `DataKey::Leaderboard`             | `Vec<LeaderboardEntry>` | Instance, bumped with contract writes           |
+| `DataKey::TotalCreators`           | `u32`                   | Instance, bumped with contract writes           |
+| `DataKey::TotalTipsVolume`         | `i128`                  | Instance, bumped with contract writes           |
+| `DataKey::Initialized`             | `bool`                  | Instance, bumped with contract writes           |
+| `DataKey::NativeToken`             | `Address`               | Instance, bumped with contract writes           |
+| `DataKey::Paused`                  | `bool`                  | Instance, bumped with contract writes           |
+| `DataKey::MinTipAmount`            | `i128`                  | Instance, bumped with contract writes           |
+| `DataKey::TipperTipCount(addr)`    | `u32`                   | Temporary, follows tip index TTL                |
+| `DataKey::TipperTip(addr, idx)`    | `u32`                   | Temporary, follows tip index TTL                |
+| `DataKey::CreatorTipCount(addr)`   | `u32`                   | Temporary, follows tip index TTL                |
+| `DataKey::CreatorTip(addr, idx)`   | `u32`                   | Temporary, follows tip index TTL                |
+| `DataKey::PendingAdmin`            | `Address`               | Instance, bumped with contract writes           |
 
-> **Note**: Tip records use temporary storage to keep costs low. The contract maintains aggregate stats in persistent storage.
+> Contract-wide config and counters live in `instance()` storage, profile
+> records live in `persistent()` storage, and tip history plus reverse tip
+> indexes live in `temporary()` storage.

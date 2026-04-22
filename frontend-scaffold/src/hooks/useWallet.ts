@@ -7,6 +7,7 @@ import {
   AlbedoModule,
   xBullModule,
 } from "@creit.tech/stellar-wallets-kit";
+import { signTx } from "../helpers/network";
 import { useWalletStore } from "../store/walletStore";
 
 interface Freighter {
@@ -17,8 +18,40 @@ interface Freighter {
 let kitInstance: StellarWalletsKit | null = null;
 let currentNetwork: WalletNetwork | null = null;
 
+type DisposableWalletKit = StellarWalletsKit & {
+  closeModal?: () => void;
+  disconnect?: () => void | Promise<void>;
+  destroy?: () => void;
+  removeAllListeners?: () => void;
+};
+
+const disposeKit = (kit: StellarWalletsKit | null) => {
+  const disposableKit = kit as DisposableWalletKit | null;
+  if (!disposableKit) return;
+
+  try {
+    disposableKit.closeModal?.();
+  } catch (error) {
+    console.warn("Failed to close wallet modal during cleanup:", error);
+  }
+
+  try {
+    void disposableKit.disconnect?.();
+  } catch (error) {
+    console.warn("Failed to disconnect wallet kit during cleanup:", error);
+  }
+
+  try {
+    disposableKit.removeAllListeners?.();
+    disposableKit.destroy?.();
+  } catch (error) {
+    console.warn("Failed to fully dispose wallet kit during cleanup:", error);
+  }
+};
+
 const getKit = (network: WalletNetwork) => {
   if (!kitInstance || currentNetwork !== network) {
+    disposeKit(kitInstance);
     kitInstance = new StellarWalletsKit({
       network,
       selectedWalletId: FREIGHTER_ID,
@@ -62,9 +95,12 @@ export const useWallet = () => {
                 // Automatic network detection for better UX
                 try {
                   // If it's Freighter, check its current network
-                  const freighterWindow = window as unknown as { freighter?: Freighter };
+                  const freighterWindow = window as unknown as {
+                    freighter?: Freighter;
+                  };
                   if (option.id === FREIGHTER_ID && freighterWindow.freighter) {
-                    const networkDetails = await freighterWindow.freighter.getNetwork();
+                    const networkDetails =
+                      await freighterWindow.freighter.getNetwork();
                     const detectedNetwork =
                       networkDetails === "PUBLIC" ? "PUBLIC" : "TESTNET";
                     if (detectedNetwork !== network) {
@@ -100,10 +136,11 @@ export const useWallet = () => {
       },
 
       signTransaction: async (xdr: string): Promise<string> => {
-        const { signedTxXdr } = await kit.signTransaction(xdr, {
-          address: publicKey ?? undefined,
-        });
-        return signedTxXdr;
+        if (!publicKey) {
+          throw new Error("Wallet not connected");
+        }
+
+        return signTx(xdr, publicKey, kit);
       },
     }),
     [
@@ -120,6 +157,6 @@ export const useWallet = () => {
 
   return useMemo(
     () => ({ publicKey, connected, connecting, error, network, ...actions }),
-    [publicKey, connected, connecting, error, network, actions]
+    [publicKey, connected, connecting, error, network, actions],
   );
 };

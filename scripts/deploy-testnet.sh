@@ -9,6 +9,7 @@
 set -euo pipefail
 
 KEY_NAME="${1:-tipz-deployer}"
+NATIVE_TOKEN_ID="${NATIVE_TOKEN_ID:-CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC}"
 
 echo "=== Stellar Tipz — Testnet Deployment ==="
 echo ""
@@ -70,9 +71,10 @@ soroban contract invoke \
     --admin "$DEPLOYER_ADDR" \
     --fee_collector "$DEPLOYER_ADDR" \
     --fee_bps 200 \
-    --native_token "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+    --native_token "$NATIVE_TOKEN_ID"
 
 echo "Contract initialized with 2% fee."
+echo "Native token SAC: $NATIVE_TOKEN_ID"
 echo ""
 echo "=== Done ==="
 echo "Contract ID: $CONTRACT_ID"

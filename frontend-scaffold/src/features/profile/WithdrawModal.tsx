@@ -1,8 +1,9 @@
 import React from "react";
+import BigNumber from "bignumber.js";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import AmountDisplay from "@/components/shared/AmountDisplay";
-import { hasPositiveBalance } from "@/helpers/balance";
+import { stroopToXlmBigNumber, xlmToStroop } from "@/helpers/format";
 import { useTipz, useProfile } from "@/hooks";
 import Input from "@/components/ui/Input";
 import TransactionStatus from "@/components/shared/TransactionStatus";
@@ -26,17 +27,72 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
   feeBps,
 }) => {
   const [amount, setAmount] = React.useState("");
-  const { withdrawTips, withdrawing, error, txHash, txStatus, reset } = useTipz();
+  const { withdrawTips, withdrawing, error, txHash, txStatus, reset } =
+    useTipz();
   const { refetch } = useProfile();
   const { addToast } = useToastStore();
 
-  const numericBalance = parseFloat(balance);
-  const numericAmount = parseFloat(amount) || 0;
-  
-  const fee = (numericAmount * feeBps) / 10000;
-  const netAmount = Math.max(0, numericAmount - fee);
+  const balanceXlm = React.useMemo(
+    () => stroopToXlmBigNumber(balance || "0"),
+    [balance],
+  );
 
-  const canWithdraw = numericAmount > 0 && numericAmount <= numericBalance;
+  React.useEffect(() => {
+    if (isOpen) {
+      setAmount(balanceXlm.toFixed());
+    }
+  }, [balanceXlm, isOpen]);
+
+  const parsedAmount = React.useMemo(() => {
+    const trimmedAmount = amount.trim();
+    if (!trimmedAmount) {
+      return null;
+    }
+
+    const nextAmount = new BigNumber(trimmedAmount);
+    return nextAmount.isFinite() ? nextAmount : null;
+  }, [amount]);
+
+  const amountError = React.useMemo(() => {
+    if (!amount.trim()) {
+      return "Enter the amount you want to withdraw.";
+    }
+
+    if (!parsedAmount) {
+      return "Enter a valid XLM amount.";
+    }
+
+    if (parsedAmount.lte(0)) {
+      return "Withdrawal amount must be greater than zero.";
+    }
+
+    if (parsedAmount.gt(balanceXlm)) {
+      return "Withdrawal amount cannot exceed your available balance.";
+    }
+
+    return null;
+  }, [amount, parsedAmount, balanceXlm]);
+
+  const requestedStroops = React.useMemo(() => {
+    if (!parsedAmount || amountError) {
+      return "0";
+    }
+
+    return xlmToStroop(parsedAmount).toFixed(0);
+  }, [amountError, parsedAmount]);
+
+  const fee = React.useMemo(() => {
+    const rawAmount = BigInt(requestedStroops);
+    return ((rawAmount * BigInt(feeBps)) / BigInt(10_000)).toString();
+  }, [feeBps, requestedStroops]);
+
+  const netAmount = React.useMemo(() => {
+    const rawAmount = BigInt(requestedStroops);
+    const rawFee = BigInt(fee);
+    return (rawAmount - rawFee).toString();
+  }, [fee, requestedStroops]);
+
+  const canWithdraw = !amountError;
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +114,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
   const handleClose = () => {
     reset();
+    setAmount(balanceXlm.toFixed());
     onClose();
   };
 
@@ -65,8 +122,8 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
     <Modal isOpen={isOpen} onClose={handleClose} title="Withdraw Tips">
       <form onSubmit={handleWithdraw} className="space-y-6">
         <p className="text-gray-600 font-medium">
-          Transfer your available balance to your connected Stellar wallet.
-          A platform fee of {(feeBps / 100).toFixed(1)}% applies.
+          Transfer your available balance to your connected Stellar wallet. A
+          platform fee of {(feeBps / 100).toFixed(1)}% applies.
         </p>
 
         <div className="space-y-4">
@@ -76,31 +133,48 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
               type="number"
               step="0.0000001"
               min="0"
-              max={balance}
+              max={balanceXlm.toFixed()}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
               required
-              disabled={withdrawing || txStatus === 'success'}
+              disabled={withdrawing || txStatus === "success"}
+              error={amountError ?? undefined}
             />
             <button
               type="button"
-              onClick={() => setAmount(balance)}
+              onClick={() => setAmount(balanceXlm.toFixed())}
               className="absolute right-3 top-[38px] text-xs font-black uppercase underline hover:text-gray-600"
-              disabled={withdrawing || txStatus === 'success'}
+              disabled={withdrawing || txStatus === "success"}
             >
               Max
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="p-3 border-2 border-black bg-gray-50">
-              <p className="text-[10px] font-black uppercase text-gray-400">Platform Fee</p>
-              <p className="font-bold">{fee.toFixed(2)} XLM</p>
+              <p className="text-[10px] font-black uppercase text-gray-400">
+                Requested
+              </p>
+              <AmountDisplay
+                amount={requestedStroops}
+                className="mt-2 block text-lg"
+              />
+            </div>
+            <div className="p-3 border-2 border-black bg-gray-50">
+              <p className="text-[10px] font-black uppercase text-gray-400">
+                Platform Fee
+              </p>
+              <AmountDisplay amount={fee} className="mt-2 block text-lg" />
             </div>
             <div className="p-3 border-2 border-black bg-green-50">
-              <p className="text-[10px] font-black uppercase text-green-600">You'll Receive</p>
-              <p className="font-bold text-green-700">{netAmount.toFixed(2)} XLM</p>
+              <p className="text-[10px] font-black uppercase text-green-600">
+                You'll Receive
+              </p>
+              <AmountDisplay
+                amount={netAmount}
+                className="mt-2 block text-lg text-green-700"
+              />
             </div>
           </div>
         </div>
@@ -112,15 +186,23 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
           <AmountDisplay amount={balance} className="text-3xl" />
         </div>
 
-        {txStatus === 'signing' || txStatus === 'submitting' || txStatus === 'confirming' ? (
+        {txStatus === "signing" ||
+        txStatus === "submitting" ||
+        txStatus === "confirming" ? (
           <TransactionStatus
             status={txStatus}
             txHash={txHash ?? undefined}
-            errorMessage={error ? (categorizeError(error) === 'network' ? ERRORS.NETWORK : ERRORS.CONTRACT) : undefined}
+            errorMessage={
+              error
+                ? categorizeError(error) === "network"
+                  ? ERRORS.NETWORK
+                  : ERRORS.CONTRACT
+                : undefined
+            }
           />
         ) : null}
 
-        {txStatus === 'success' && (
+        {txStatus === "success" && (
           <div className="p-3 border-2 border-green-500 bg-green-50 text-green-700 text-sm font-bold text-center uppercase">
             Withdrawal Successful!
           </div>
@@ -133,7 +215,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
             type="submit"
             className="w-full"
             loading={withdrawing}
-            disabled={withdrawing || !canWithdraw || txStatus === 'success'}
+            disabled={withdrawing || !canWithdraw || txStatus === "success"}
           >
             {withdrawing ? "Processing..." : "Confirm Withdrawal"}
           </Button>
@@ -145,12 +227,13 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
             className="w-full"
             disabled={withdrawing}
           >
-            {txStatus === 'success' ? "Done" : "Cancel"}
+            {txStatus === "success" ? "Done" : "Cancel"}
           </Button>
         </div>
 
         <p className="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest leading-relaxed">
-          Network fees will be deducted by the Stellar network.<br />
+          Network fees will be deducted by the Stellar network.
+          <br />
           Funds will be available in your wallet instantly.
         </p>
       </form>

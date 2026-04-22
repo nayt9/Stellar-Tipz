@@ -1,8 +1,11 @@
-import React, { useMemo } from "react";
+import BigNumber from "bignumber.js";
+import React, { useEffect, useMemo, useState } from "react";
 
 import AmountDisplay from "../../components/shared/AmountDisplay";
 import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
+import { stroopToXlmBigNumber, xlmToStroop } from "../../helpers/format";
 import { useTipz } from "../../hooks";
 
 interface WithdrawModalProps {
@@ -19,36 +22,92 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
   onClose,
 }) => {
   const { withdrawTips, withdrawing, error, txHash, reset } = useTipz();
+  const [amount, setAmount] = useState("");
+
+  const balanceXlm = useMemo(
+    () => stroopToXlmBigNumber(balance || "0"),
+    [balance],
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setAmount(balanceXlm.toFixed());
+    }
+  }, [balanceXlm, isOpen]);
+
+  const parsedAmount = useMemo(() => {
+    const trimmedAmount = amount.trim();
+    if (!trimmedAmount) {
+      return null;
+    }
+
+    const nextAmount = new BigNumber(trimmedAmount);
+    return nextAmount.isFinite() ? nextAmount : null;
+  }, [amount]);
+
+  const amountError = useMemo(() => {
+    if (!amount.trim()) {
+      return "Enter the amount you want to withdraw.";
+    }
+
+    if (!parsedAmount) {
+      return "Enter a valid XLM amount.";
+    }
+
+    if (parsedAmount.lte(0)) {
+      return "Withdrawal amount must be greater than zero.";
+    }
+
+    if (parsedAmount.gt(balanceXlm)) {
+      return "Withdrawal amount cannot exceed your available balance.";
+    }
+
+    return null;
+  }, [amount, parsedAmount, balanceXlm]);
+
+  const requestedStroops = useMemo(() => {
+    if (!parsedAmount || amountError) {
+      return "0";
+    }
+
+    return xlmToStroop(parsedAmount).toFixed(0);
+  }, [amountError, parsedAmount]);
 
   const handleWithdraw = async () => {
+    if (amountError) {
+      return;
+    }
+
     try {
-      await withdrawTips(balance);
+      await withdrawTips(amount);
     } catch (err) {
-      console.error('Withdrawal failed:', err);
+      console.error("Withdrawal failed:", err);
     }
   };
 
   const handleClose = () => {
     reset();
+    setAmount(balanceXlm.toFixed());
     onClose();
   };
+
   const { fee, net } = useMemo(() => {
-    const rawBalance = BigInt(balance || "0");
-    const feeAmount = (rawBalance * BigInt(feeBps)) / BigInt(10_000);
-    const netAmount = rawBalance - feeAmount;
+    const rawAmount = BigInt(requestedStroops);
+    const feeAmount = (rawAmount * BigInt(feeBps)) / BigInt(10_000);
+    const netAmount = rawAmount - feeAmount;
 
     return {
       fee: feeAmount.toString(),
       net: netAmount.toString(),
     };
-  }, [balance, feeBps]);
+  }, [feeBps, requestedStroops]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Withdraw balance">
       <div className="space-y-5">
         <p className="text-sm font-medium leading-6 text-gray-700">
-          This scaffold modal previews the withdrawal breakdown and keeps the
-          action flow visible until contract-backed withdrawal execution lands.
+          Choose how much of your current balance you want to withdraw. The fee
+          and estimated net payout update before you confirm.
         </p>
 
         {error && (
@@ -56,23 +115,55 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {error}
           </div>
         )}
-        
+
         {txHash && (
           <div className="p-3 border-2 border-green-500 bg-green-50 text-green-700 text-sm">
             Withdrawal successful! Transaction hash: {txHash}
           </div>
         )}
 
+        <div className="relative">
+          <Input
+            label="Amount to withdraw"
+            type="number"
+            step="0.0000001"
+            min="0"
+            max={balanceXlm.toFixed()}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="0.00"
+            disabled={withdrawing}
+            error={amountError ?? undefined}
+          />
+          <button
+            type="button"
+            onClick={() => setAmount(balanceXlm.toFixed())}
+            className="absolute right-3 top-[38px] text-xs font-black uppercase underline hover:text-gray-600"
+            disabled={withdrawing}
+          >
+            Max
+          </button>
+        </div>
+
         <div className="grid gap-3">
           <div className="border-2 border-black bg-yellow-50 p-4">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">
-              Gross amount
+              Available balance
             </p>
             <AmountDisplay amount={balance} className="mt-2 block text-2xl" />
           </div>
           <div className="border-2 border-black bg-white p-4">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">
-              Fee
+              Requested amount
+            </p>
+            <AmountDisplay
+              amount={requestedStroops}
+              className="mt-2 block text-xl"
+            />
+          </div>
+          <div className="border-2 border-black bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">
+              Estimated fee
             </p>
             <AmountDisplay amount={fee} className="mt-2 block text-xl" />
           </div>
@@ -80,7 +171,10 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
             <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
               Net payout
             </p>
-            <AmountDisplay amount={net} className="mt-2 block text-2xl text-white" />
+            <AmountDisplay
+              amount={net}
+              className="mt-2 block text-2xl text-white"
+            />
           </div>
         </div>
 
@@ -88,8 +182,11 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
           <Button variant="outline" onClick={handleClose}>
             Close
           </Button>
-          <Button onClick={handleWithdraw} disabled={withdrawing}>
-            {withdrawing ? 'Withdrawing...' : 'Confirm withdrawal'}
+          <Button
+            onClick={handleWithdraw}
+            disabled={withdrawing || Boolean(amountError)}
+          >
+            {withdrawing ? "Withdrawing..." : "Confirm withdrawal"}
           </Button>
         </div>
       </div>
